@@ -1,0 +1,130 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# 关键：两个平台一律用 `electron-builder --publish never` 只构建、不发布，各自把产物
+# 上传为工作流 artifact；最后由单独的 release job 汇总所有产物，创建【唯一】一个 GitHub Release。
+# 这样 electron-builder 不再参与 Release 的创建/查找，彻底消除「每个版本两个 Release」的重复问题
+# （此前 mac / win 两个 job 各自 --publish always，会各自创建一次 Release）。
+jobs:
+  # 计费优化（2026-07-11）：macOS runner 按 10 倍分钟计费——mac job 不再重复跑测试/类型检查
+  # （Windows job 保留全量测试作为跨平台守门，本地发布流程本身已全绿后才打 tag）。
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer/main
+        run: npx electron-vite build
+
+      - name: Force rebuild better-sqlite3 for Electron ABI
+        run: npx electron-rebuild -f -w better-sqlite3
+
+      - name: Build mac (no publish)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --mac --publish never
+
+      - name: Upload mac artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-mac
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.blockmap
+            dist/latest-mac.yml
+          if-no-files-found: warn
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild better-sqlite3 for Node (test ABI)
+        run: npm rebuild better-sqlite3
+
+      - name: Run tests
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build renderer/main
+        run: npx electron-vite build
+
+      - name: Force rebuild better-sqlite3 for Electron ABI
+        run: npx electron-rebuild -f -w better-sqlite3
+
+      - name: Build windows (no publish)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --publish never
+
+      - name: Upload windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-win
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
+          if-no-files-found: warn
+
+  # 仅在 tag 推送时创建唯一的 Release，汇总两平台产物。手动 dispatch 只产出 artifact，不发布。
+  release:
+    needs: [build-mac, build-win]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List collected files
+        run: ls -R dist
+
+      # 发布说明取自附注 tag 的 message（发布流程用 `git tag -a vX.Y.Z -m "…"` 撰写）；
+      # 轻量 tag（无 message）时该文件为空，Release 正文则只剩自动生成的提交清单。
+      - name: Extract release notes from tag annotation
+        run: |
+          git fetch --tags --force
+          git tag -l --format='%(contents)' "${{ github.ref_name }}" > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: Create single GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: true
+          files: dist/**/*
+          fail_on_unmatched_files: false
