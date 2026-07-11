@@ -1,0 +1,49 @@
+{
+  "name": "ai-quote",
+  "productName": "AI报价",
+  "author": "bonech <bonech@gmail.com>",
+  "private": true,
+  "type": "module",
+  "version": "1.2.0",
+  "description": "AI 报价单桌面工具：产品库、供应商报价、项目分层计价与 Excel 导出",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "postinstall": "electron-rebuild -f -w better-sqlite3 || true",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.2",
+    "antd": "^6.5.0",
+    "better-sqlite3": "^12.11.1",
+    "echarts": "^6.1.0",
+    "electron-updater": "^6.8.9",
+    "exceljs": "^4.4.0",
+    "pdfjs-dist": "^4.10.38",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
