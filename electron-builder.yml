@@ -1,0 +1,38 @@
+appId: com.aiquote.app
+productName: AI报价
+directories:
+  output: dist
+files:
+  - out/**/*
+  - resources/**/*
+  - package.json
+asarUnpack:
+  - "**/*.node"
+npmRebuild: true
+artifactName: "${name}-${version}-${os}-${arch}.${ext}"
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+  category: public.app-category.business
+  identity: "-"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: AI报价
+publish:
+  provider: github
+  owner: baotangyin
+  repo: ai-quote-free
+  releaseType: release
