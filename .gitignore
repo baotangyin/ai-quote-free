@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+dist/
+out/
+*.log
+
+samples/
+.superpowers/
+
+# 在线授权服务：私钥与运行时数据库绝不入库
+server/license/keys/
+server/license/*.db
+server/license/*.db-*
+server/license/.env
